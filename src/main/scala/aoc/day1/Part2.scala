@@ -5,7 +5,7 @@ object Part2 extends Challenge(day(1).part(2)):
   def execute: Long =
     val regex = """(\d+)\s+(\d+)""".r
     val parsed = input.map { str =>
-      val regex(a, b) = str
+      val regex(a, b) = str: @unchecked
       (a.toInt, b.toInt)
     }
     val (colA, colB) = parsed.foldLeft[(List[Int], List[Int])]((List.empty, List.empty)) { (acc, cur) =>

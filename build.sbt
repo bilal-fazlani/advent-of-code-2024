@@ -6,6 +6,12 @@ lazy val root = project
   .settings(
     name := "advent-of-code-2024",
     scalaVersion := scala3Version,
+    scalacOptions ++= Seq(
+      "-source:3.2-migration",
+      "-rewrite",
+      "-unchecked",
+      "-feature"
+    ),
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio" % zioVersion,
       "dev.zio" %% "zio-streams" % zioVersion,
