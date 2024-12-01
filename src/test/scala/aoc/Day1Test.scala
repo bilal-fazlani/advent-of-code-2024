@@ -9,8 +9,8 @@ object Day1Test extends ZIOSpecDefault {
     test("part 1 : sum of differences") {
       assertTrue(Part1.execute == 11)
     },
-    test("part 2 : sum of differences") {
-      assertCompletes
+    test("part 2 : similarity") {
+      assertTrue(Part2.execute == 31)
     }
   )
 }
