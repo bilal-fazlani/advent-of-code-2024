@@ -16,6 +16,7 @@ lazy val root = project
       "dev.zio" %% "zio" % zioVersion,
       "dev.zio" %% "zio-streams" % zioVersion,
       "dev.zio" %% "zio-parser" % "0.1.10",
+      "com.bilal-fazlani" %% "rainbowcli" % "3.0.1",
       "dev.zio" %% "zio-test" % zioVersion % Test,
       "dev.zio" %% "zio-test-sbt" % zioVersion % Test
     )

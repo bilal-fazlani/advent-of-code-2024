@@ -1,7 +1,7 @@
 package aoc
 package day1
 
-object Part1 extends Challenge(day(1).part(1)):
+object Part1 extends Challenge(day(1)):
   def execute: Long =
     val regex = """(\d+)\s+(\d+)""".r
     val parsed = input.map { str =>
