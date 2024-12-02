@@ -22,15 +22,13 @@ object Part2 extends Challenge(day(2).part(1)):
       case (Damped(i1), _) if i1 == other => true
       case _                              => false
 
-  enum State(val isSafe: Boolean, dampening: Dampening):
-    case Init(dampening: Dampening) extends State(false, dampening)
-    case Started(prev: Int, dampening: Dampening) extends State(false, dampening)
-    case Increasing(prev: Int, dampening: Dampening) extends State(true, dampening)
-    case Decreasing(prev: Int, dampening: Dampening) extends State(true, dampening)
-    case Errored(reason: ErrorReason, index: Int, dir: Option[Direction], dampening: Dampening)
+  enum State(val isSafe: Boolean, val dampening: Dampening):
+    case Init(override val dampening: Dampening) extends State(false, dampening)
+    case Started(prev: Int, override val dampening: Dampening) extends State(false, dampening)
+    case Increasing(prev: Int, override val dampening: Dampening) extends State(true, dampening)
+    case Decreasing(prev: Int, override val dampening: Dampening) extends State(true, dampening)
+    case Errored(reason: ErrorReason, index: Int, dir: Option[Direction], override val dampening: Dampening)
         extends State(false, dampening)
-
-    infix def orElse(that: State): State = if this.isSafe then this else that
 
   enum Direction:
     case Increase
@@ -50,8 +48,10 @@ object Part2 extends Challenge(day(2).part(1)):
           case State.Init(_)    => State.Started(cur, target)
           case State.Started(prev, _) =>
             if cur == prev then State.Errored(ErrorReason.SameNumber(prev), index, None, target)
-            else if Math.abs(cur - prev) > 3 then
+            else if cur - prev > 3 then
               State.Errored(ErrorReason.LargeJump(prev, cur), index, Some(Direction.Increase), target)
+            else if prev - cur > 3 then
+              State.Errored(ErrorReason.LargeJump(prev, cur), index, Some(Direction.Decrease), target)  
             else if cur > prev then State.Increasing(cur, target)
             else State.Decreasing(cur, target)
           case State.Increasing(prev, _) =>
@@ -78,21 +78,13 @@ object Part2 extends Challenge(day(2).part(1)):
             else if Math.abs(cur - prev) > 3 then
               State.Errored(ErrorReason.LargeJump(prev, cur), index, Some(Direction.Decrease), target)
             else State.Decreasing(cur, target)
-      case (agg, (cur, index)) =>
-        agg match
-          case State.Init(target)             => State.Init(target)
-          case State.Started(prev, target)    => State.Started(prev, target)
-          case State.Increasing(prev, target) => State.Increasing(prev, target)
-          case State.Decreasing(prev, target) => State.Decreasing(prev, target)
-          case e: State.Errored               => e
+      case (agg, (cur, index)) => agg
     }
 
     val state = {
       val initial = calculate(Dampening.None)
-      val damped = LazyList(numbers.indices*).map { i =>
-        calculate(Dampening.Damped(i))
-      }
-      damped.prepended(initial).find(_.isSafe).getOrElse(initial)
+      val dampened = LazyList(numbers.indices*).map(i => calculate(Dampening.Damped(i)))
+      dampened.prepended(initial).find(_.isSafe).getOrElse(initial)
     }
 
     val isSafe: Boolean = state.isSafe
@@ -101,13 +93,9 @@ object Part2 extends Challenge(day(2).part(1)):
       given ColorContext = ColorContext(true)
       val numbersString = s": ${numbers.zipWithIndex
           .map { (n, i) =>
-            val dampIndex = state match
-              case State.Started(_, Dampening.Damped(i))       => i
-              case State.Increasing(_, Dampening.Damped(i))    => i
-              case State.Decreasing(_, Dampening.Damped(i))    => i
-              case State.Errored(_, _, _, Dampening.Damped(i)) => i
-              case State.Init(Dampening.Damped(i))             => i
-              case _                                           => -1
+            val dampIndex = state.dampening match
+              case Dampening.Damped(d) => d
+              case _                   => -1
             val erroredIndex = state match
               case State.Errored(_, i, _, _) => i
               case _                         => -1
