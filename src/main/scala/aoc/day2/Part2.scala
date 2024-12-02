@@ -14,16 +14,23 @@ object Part2 extends Challenge(day(2).part(1)):
     }
     reports.count(_.isSafe)
 
-  enum Damping:
+  enum Dampening:
     case None
     case Damped(index: Int)
 
-  enum State:
-    case Init
-    case Started(prev: Int, damping: Damping)
-    case Increasing(prev: Int, damping: Damping)
-    case Decreasing(prev: Int, damping: Damping)
-    case Errored(reason: ErrorReason, damping: Damping, index: Int, dir: Option[Direction])
+    def isEquals(other: Int): Boolean = (this, other) match
+      case (Damped(i1), _) if i1 == other => true
+      case _                              => false
+
+  enum State(val isSafe: Boolean, dampening: Dampening):
+    case Init(dampening: Dampening) extends State(false, dampening)
+    case Started(prev: Int, dampening: Dampening) extends State(false, dampening)
+    case Increasing(prev: Int, dampening: Dampening) extends State(true, dampening)
+    case Decreasing(prev: Int, dampening: Dampening) extends State(true, dampening)
+    case Errored(reason: ErrorReason, index: Int, dir: Option[Direction], dampening: Dampening)
+        extends State(false, dampening)
+
+    infix def orElse(that: State): State = if this.isSafe then this else that
 
   enum Direction:
     case Increase
@@ -35,99 +42,89 @@ object Part2 extends Challenge(day(2).part(1)):
     case SameNumber(prev: Int)
 
   case class Report(numbers: List[Int]) {
-    val state = calculate(numbers)
 
-    private def calculate(numbers: List[Int]) = numbers.zipWithIndex.foldLeft[State](State.Init) {
-      case (agg, (num, index)) =>
+    private def calculate(target: Dampening): State = numbers.zipWithIndex.foldLeft[State](State.Init(target)) {
+      case (agg, (cur, index)) if !(target isEquals index) =>
         agg match
           case e: State.Errored => e
-
-          case State.Init => State.Started(num, Damping.None)
-
-          case State.Started(prev, Damping.None) =>
-            if num == prev then State.Started(prev, Damping.Damped(index))
-            else if num > prev then State.Increasing(num, Damping.None)
-            else State.Decreasing(num, Damping.None)
-
-          case State.Started(prev, d @ Damping.Damped(_)) =>
-            if num == prev then State.Errored(ErrorReason.SameNumber(prev), d, index, None)
-            else if num > prev then State.Increasing(num, d)
-            else State.Decreasing(num, d)
-
-          case State.Increasing(prev, d @ Damping.Damped(_)) =>
-            if num == prev then State.Errored(ErrorReason.SameNumber(prev), d, index, Some(Direction.Increase))
-            else if num < prev then
+          case State.Init(_)    => State.Started(cur, target)
+          case State.Started(prev, _) =>
+            if cur == prev then State.Errored(ErrorReason.SameNumber(prev), index, None, target)
+            else if Math.abs(cur - prev) > 3 then
+              State.Errored(ErrorReason.LargeJump(prev, cur), index, Some(Direction.Increase), target)
+            else if cur > prev then State.Increasing(cur, target)
+            else State.Decreasing(cur, target)
+          case State.Increasing(prev, _) =>
+            if cur == prev then State.Errored(ErrorReason.SameNumber(prev), index, Some(Direction.Increase), target)
+            else if cur < prev then
               State.Errored(
-                ErrorReason.ChangedDirection(prev, num, Direction.Decrease),
-                d,
+                ErrorReason.ChangedDirection(prev, cur, Direction.Decrease),
                 index,
-                Some(Direction.Increase)
+                Some(Direction.Increase),
+                target
               )
-            else if Math.abs(num - prev) > 3 then
-              State.Errored(ErrorReason.LargeJump(prev, num), d, index, Some(Direction.Increase))
-            else State.Increasing(num, d)
-
-          case State.Increasing(prev, Damping.None) =>
-            if num == prev then State.Increasing(prev, Damping.Damped(index))
-            else if Math.abs(num - prev) > 3 then State.Increasing(prev, Damping.Damped(index))
-            else if num < prev then State.Increasing(prev, Damping.Damped(index))
-            else State.Increasing(num, Damping.None)
-
-          case State.Decreasing(prev, d @ Damping.Damped(_)) =>
-            if num == prev then State.Errored(ErrorReason.SameNumber(prev), d, index, Some(Direction.Decrease))
-            else if num > prev then
+            else if Math.abs(cur - prev) > 3 then
+              State.Errored(ErrorReason.LargeJump(prev, cur), index, Some(Direction.Increase), target)
+            else State.Increasing(cur, target)
+          case State.Decreasing(prev, _) =>
+            if cur == prev then State.Errored(ErrorReason.SameNumber(prev), index, Some(Direction.Decrease), target)
+            else if cur > prev then
               State.Errored(
-                ErrorReason.ChangedDirection(prev, num, Direction.Increase),
-                d,
+                ErrorReason.ChangedDirection(prev, cur, Direction.Increase),
                 index,
-                Some(Direction.Decrease)
+                Some(Direction.Decrease),
+                target
               )
-            else if Math.abs(num - prev) > 3 then
-              State.Errored(ErrorReason.LargeJump(prev, num), d, index, Some(Direction.Decrease))
-            else State.Decreasing(num, d)
-
-          case State.Decreasing(prev, Damping.None) =>
-            if num == prev then State.Decreasing(prev, Damping.Damped(index))
-            else if num > prev then State.Decreasing(prev, Damping.Damped(index))
-            else if Math.abs(num - prev) > 3 then State.Decreasing(prev, Damping.Damped(index))
-            else State.Decreasing(num, Damping.None)
+            else if Math.abs(cur - prev) > 3 then
+              State.Errored(ErrorReason.LargeJump(prev, cur), index, Some(Direction.Decrease), target)
+            else State.Decreasing(cur, target)
+      case (agg, (cur, index)) =>
+        agg match
+          case State.Init(target)             => State.Init(target)
+          case State.Started(prev, target)    => State.Started(prev, target)
+          case State.Increasing(prev, target) => State.Increasing(prev, target)
+          case State.Decreasing(prev, target) => State.Decreasing(prev, target)
+          case e: State.Errored               => e
     }
 
-    def bruteForced = Range(0, numbers.length)
-      .map(i => numbers.zipWithIndex.filter(_._2 != i).map(_._1))
-      .map(calculate(_))
+    val state = {
+      val initial = calculate(Dampening.None)
+      val damped = LazyList(numbers.indices*).map { i =>
+        calculate(Dampening.Damped(i))
+      }
+      damped.prepended(initial).find(_.isSafe).getOrElse(initial)
+    }
 
-    val isSafe: Boolean = state match
-      case State.Increasing(_, _) | State.Decreasing(_, _) => true
-      case _                                               => false
+    val isSafe: Boolean = state.isSafe
 
     override def toString(): String =
       given ColorContext = ColorContext(true)
       val numbersString = s": ${numbers.zipWithIndex
           .map { (n, i) =>
             val dampIndex = state match
-              case State.Started(_, Damping.Damped(i))       => i
-              case State.Increasing(_, Damping.Damped(i))    => i
-              case State.Decreasing(_, Damping.Damped(i))    => i
-              case State.Errored(_, Damping.Damped(i), _, _) => i
-              case _                                         => -1
+              case State.Started(_, Dampening.Damped(i))       => i
+              case State.Increasing(_, Dampening.Damped(i))    => i
+              case State.Decreasing(_, Dampening.Damped(i))    => i
+              case State.Errored(_, _, _, Dampening.Damped(i)) => i
+              case State.Init(Dampening.Damped(i))             => i
+              case _                                           => -1
             val erroredIndex = state match
-              case State.Errored(_, _, i, _) => i
+              case State.Errored(_, i, _, _) => i
               case _                         => -1
-            if i == dampIndex then s"${n.toString.yellow}"
-            else if i == erroredIndex then s"${n.toString.red}"
+            if i == erroredIndex then s"${n.toString.red}"
+            else if i == dampIndex then s"${n.toString.yellow}"
             else n.toString
           }
           .mkString(", ")}"
       state match
-        case State.Init          => s"❗️ Init: $numbersString"
+        case s: State.Init       => s"❗️ Init $numbersString"
         case s: State.Started    => s"❗️ Started $numbersString"
         case s: State.Increasing => s"✅ ⬆️".green + s" $numbersString"
         case s: State.Decreasing => s"✅ ⬇️".green + s" $numbersString"
-        case State.Errored(r, _, _, d) =>
+        case State.Errored(r, _, d, _) =>
           val dir = d match
             case Some(Direction.Increase) => "⬆️".red
             case Some(Direction.Decrease) => "⬇️".red
-            case None                     => " "
+            case None                     => " ".red
           s"❌ $dir $numbersString ${r.toString().cyan}"
   }

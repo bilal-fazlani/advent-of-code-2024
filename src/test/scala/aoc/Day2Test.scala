@@ -9,7 +9,7 @@ object Day2Test extends ZIOSpecDefault {
     test("part 1 : safety report") {
       assertTrue(Part1.execute == 2)
     },
-    test("part 2 : safety report with damping effect") {
+    test("part 2 : safety report with dampening effect") {
       assertTrue(Part2.execute == 4)
     }
   )
