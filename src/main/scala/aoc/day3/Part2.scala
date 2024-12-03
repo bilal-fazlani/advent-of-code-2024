@@ -4,9 +4,10 @@ package day3
 import aoc.day3.Part2.Expression.*
 
 object Part2 extends Challenge(day(3).part(2)):
-  def execute: Long =
-    val expression = Compiler.parse.andThen(Compiler.compile)(input)
-    expression.evaluate
+  def execute: Long = input
+    |> Compiler.parse
+    |> Compiler.compile
+    |> (_.evaluate)
 
   object Compiler {
     sealed trait Token
@@ -29,7 +30,7 @@ object Part2 extends Challenge(day(3).part(2)):
         }
       }
 
-    def compile(tokens: Seq[Token]): Expression.Multi =
+    def compile(tokens: Seq[Token]): Expression.Program =
       enum CompilingState:
         case Collecting(prev: Seq[Expression.Do], current: Seq[Expression.Multiply])
         case Stopped(prev: Seq[Expression.Do])
@@ -47,20 +48,20 @@ object Part2 extends Challenge(day(3).part(2)):
       }
       state match
         case CompilingState.Collecting(prev, current) if current.nonEmpty =>
-          Expression.Multi(prev.appended(Expression.Do(current)))
-        case CompilingState.Collecting(prev, _) => Expression.Multi(prev)
-        case CompilingState.Stopped(prev)       => Expression.Multi(prev)
+          Expression.Program(prev.appended(Expression.Do(current)))
+        case CompilingState.Collecting(prev, _) => Expression.Program(prev)
+        case CompilingState.Stopped(prev)       => Expression.Program(prev)
 
   }
 
   sealed trait Expression {
     def evaluate: Long = this match
-      case Multi(dos)            => dos.foldLeft(0L)(_ + _.evaluate)
+      case Program(dos)          => dos.foldLeft(0L)(_ + _.evaluate)
       case Do(multis)            => multis.foldLeft(0L)(_ + _.evaluate)
       case Multiply(left, right) => left * right
   }
   object Expression {
-    case class Multi(dos: Seq[Do]) extends Expression
+    case class Program(dos: Seq[Do]) extends Expression
     case class Do(multiplications: Seq[Multiply]) extends Expression
     case class Multiply(left: Long, right: Long) extends Expression
   }

@@ -32,3 +32,5 @@ enum InputFile:
 def day(number: Int): InputFile.Day = InputFile.Day(number)
 
 extension (day: InputFile.Day) def part(number: Int): InputFile.Part = InputFile.Part(day, number)
+
+extension [A](a: A) infix def |>[B](f: A => B): B = f(a)
