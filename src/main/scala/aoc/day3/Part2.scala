@@ -5,13 +5,11 @@ import aoc.day3.Part2.Expression.*
 
 object Part2 extends Challenge(day(3).part(2)):
   def execute: Long =
-    val regex = """mul\((\d+)\,(\d+)\)""".r
     val expression = Compiler.parse.andThen(Compiler.compile)(input)
     expression.evaluate
 
   object Compiler {
     sealed trait Token
-
     object Token {
       case class Multiply(left: Long, right: Long) extends Token
       case object Do extends Token
@@ -31,11 +29,11 @@ object Part2 extends Challenge(day(3).part(2)):
         }
       }
 
-    enum CompilingState:
-      case Collecting(prev: Seq[Expression.Do], current: Seq[Expression.Multiply])
-      case Stopped(prev: Seq[Expression.Do])
-
     def compile(tokens: Seq[Token]): Expression.Multi =
+      enum CompilingState:
+        case Collecting(prev: Seq[Expression.Do], current: Seq[Expression.Multiply])
+        case Stopped(prev: Seq[Expression.Do])
+
       val state = {
         tokens.foldLeft[CompilingState](CompilingState.Collecting(Seq.empty, Seq.empty)) {
           case (CompilingState.Collecting(prev, current), Token.Multiply(l, r)) =>
@@ -61,7 +59,6 @@ object Part2 extends Challenge(day(3).part(2)):
       case Do(multis)            => multis.foldLeft(0L)(_ + _.evaluate)
       case Multiply(left, right) => left * right
   }
-
   object Expression {
     case class Multi(dos: Seq[Do]) extends Expression
     case class Do(multiplications: Seq[Multiply]) extends Expression
