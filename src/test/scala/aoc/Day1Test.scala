@@ -4,10 +4,10 @@ import aoc.day1.*
 
 class Day1Test extends munit.FunSuite {
   test("part 1 : sum of differences") {
-    assert(Part1.execute == 11)
+    assertEquals(Part1.execute, 11L)
   }
 
   test("part 2 : similarity") {
-    assert(Part2.execute == 31)
+    assertEquals(Part2.execute, 31L)
   }
 }

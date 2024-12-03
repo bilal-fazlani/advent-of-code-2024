@@ -10,6 +10,7 @@ lazy val root = project
       "-source:3.4-migration",
       "-rewrite",
       "-unchecked",
+      "-deprecation",
       "-feature"
     ),
     libraryDependencies ++= Seq(
