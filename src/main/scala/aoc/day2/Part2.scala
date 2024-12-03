@@ -18,7 +18,7 @@ object Part2 extends Challenge(day(2).part(1)):
     case None
     case Damped(index: Int)
 
-    def isEquals(other: Int): Boolean = (this, other) match
+    infix def isEquals(other: Int): Boolean = (this, other) match
       case (Damped(i1), _) if i1 == other => true
       case _                              => false
 
@@ -51,7 +51,7 @@ object Part2 extends Challenge(day(2).part(1)):
             else if cur - prev > 3 then
               State.Errored(ErrorReason.LargeJump(prev, cur), index, Some(Direction.Increase), target)
             else if prev - cur > 3 then
-              State.Errored(ErrorReason.LargeJump(prev, cur), index, Some(Direction.Decrease), target)  
+              State.Errored(ErrorReason.LargeJump(prev, cur), index, Some(Direction.Decrease), target)
             else if cur > prev then State.Increasing(cur, target)
             else State.Decreasing(cur, target)
           case State.Increasing(prev, _) =>

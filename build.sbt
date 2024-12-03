@@ -7,17 +7,13 @@ lazy val root = project
     name := "advent-of-code-2024",
     scalaVersion := scala3Version,
     scalacOptions ++= Seq(
-      "-source:3.2-migration",
+      "-source:3.4-migration",
       "-rewrite",
       "-unchecked",
       "-feature"
     ),
     libraryDependencies ++= Seq(
-      "dev.zio" %% "zio" % zioVersion,
-      "dev.zio" %% "zio-streams" % zioVersion,
-      "dev.zio" %% "zio-parser" % "0.1.10",
       "com.bilal-fazlani" %% "rainbowcli" % "3.0.1",
-      "dev.zio" %% "zio-test" % zioVersion % Test,
-      "dev.zio" %% "zio-test-sbt" % zioVersion % Test
+      "org.scalameta" %% "munit" % "0.7.29" % Test
     )
   )
