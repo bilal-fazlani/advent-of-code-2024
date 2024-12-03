@@ -2,6 +2,7 @@ package aoc
 package day3
 
 import Part2.Expression.*
+import zio.parser.*
 
 object Part2 extends Challenge(day(3).part(2)):
   def execute: Long = input |> parse |> compile |> run
@@ -10,20 +11,17 @@ object Part2 extends Challenge(day(3).part(2)):
     case Multiply(left: Long, right: Long)
     case Do
     case Dont
+    case Unknown
 
   def parse(input: Seq[String]): Seq[Token] =
-    val mulRegex = """mul\((\d+)\,(\d+)\)""".r
-    val doRegex = """(?:do\(\))""".r
-    val dontRegex = """(?:don\'t\(\))""".r
-    val reg = s"""$mulRegex|$doRegex|$dontRegex""".r
-
-    input.flatMap {
-      reg.findAllMatchIn(_).map {
-        case m if mulRegex matches m.matched  => Token.Multiply(m.group(1).toLong, m.group(2).toLong)
-        case m if doRegex matches m.matched   => Token.Do
-        case m if dontRegex matches m.matched => Token.Dont
-      }
+    val doParser = Parser.string("do()", Token.Do)
+    val dontParser = Parser.string("don't()", Token.Dont)
+    val mulParser = {
+      val number = Parser.digit.repeat0.map(x => x.mkString.toLong)
+      (Parser.string("mul(", ()) ~ number ~ Parser.string(",", ()) ~ number ~ Parser.string(")", ())).to[Token.Multiply]
     }
+    val parser = doParser.orElse(dontParser).orElse(mulParser).orElse(Parser.any.as(Token.Unknown)).*
+    input.flatMap(parser.parseString(_).getOrElse(throw Exception("Failed to parse")))
 
   def compile(tokens: Seq[Token]): Program =
     enum CompilingState:
@@ -33,6 +31,7 @@ object Part2 extends Challenge(day(3).part(2)):
     import CompilingState.*
 
     tokens.foldLeft[CompilingState](Collecting(Seq.empty, Seq.empty)) {
+      case (x, Token.Unknown)                       => x
       case (Collecting(d, muls), m: Token.Multiply) => Collecting(d, muls :+ Multiply(m.left, m.right))
       case (c: Collecting, Token.Do)                => c
       case (c: Collecting, Token.Dont)              => Stopped(c.dos :+ Do(c.muls))

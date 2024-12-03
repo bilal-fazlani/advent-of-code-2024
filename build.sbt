@@ -15,6 +15,7 @@ lazy val root = project
     ),
     libraryDependencies ++= Seq(
       "com.bilal-fazlani" %% "rainbowcli" % "3.0.1",
+      "dev.zio" %% "zio-parser" % "0.1.11",
       "org.scalameta" %% "munit" % "0.7.29" % Test
     )
   )
