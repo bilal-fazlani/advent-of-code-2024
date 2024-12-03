@@ -6,13 +6,10 @@ import com.bilalfazlani.rainbowcli.*
 object Part2 extends Challenge(day(2).part(1)):
   def execute: Long =
     val regex = """\d+""".r
-    val reports = input.map { str =>
+    input.count { str =>
       val numbers = regex.findAllIn(str).toList.map(_.toInt)
-      val report = Report(numbers)
-      println(report)
-      report
+      getCombinations(numbers).exists(safe)
     }
-    reports.count(_.isSafe)
 
   enum Dampening:
     case None
@@ -22,97 +19,37 @@ object Part2 extends Challenge(day(2).part(1)):
       case (Damped(i1), _) if i1 == other => true
       case _                              => false
 
-  enum State(val isSafe: Boolean, val dampening: Dampening):
-    case Init(override val dampening: Dampening) extends State(false, dampening)
-    case Started(prev: Int, override val dampening: Dampening) extends State(false, dampening)
-    case Increasing(prev: Int, override val dampening: Dampening) extends State(true, dampening)
-    case Decreasing(prev: Int, override val dampening: Dampening) extends State(true, dampening)
-    case Errored(reason: ErrorReason, index: Int, dir: Option[Direction], override val dampening: Dampening)
-        extends State(false, dampening)
+  enum State:
+    case Increasing, Decreasing, Errored
 
-  enum Direction:
-    case Increase
-    case Decrease
-
-  enum ErrorReason:
-    case LargeJump(prev: Int, next: Int)
-    case ChangedDirection(prev: Int, next: Int, newDirection: Direction)
-    case SameNumber(prev: Int)
-
-  case class Report(numbers: List[Int]) {
-
-    private def calculate(target: Dampening): State = numbers.zipWithIndex.foldLeft[State](State.Init(target)) {
-      case (agg, (cur, index)) if !(target isEquals index) =>
-        agg match
-          case e: State.Errored => e
-          case State.Init(_)    => State.Started(cur, target)
-          case State.Started(prev, _) =>
-            if cur == prev then State.Errored(ErrorReason.SameNumber(prev), index, None, target)
-            else if cur - prev > 3 then
-              State.Errored(ErrorReason.LargeJump(prev, cur), index, Some(Direction.Increase), target)
-            else if prev - cur > 3 then
-              State.Errored(ErrorReason.LargeJump(prev, cur), index, Some(Direction.Decrease), target)
-            else if cur > prev then State.Increasing(cur, target)
-            else State.Decreasing(cur, target)
-          case State.Increasing(prev, _) =>
-            if cur == prev then State.Errored(ErrorReason.SameNumber(prev), index, Some(Direction.Increase), target)
-            else if cur < prev then
-              State.Errored(
-                ErrorReason.ChangedDirection(prev, cur, Direction.Decrease),
-                index,
-                Some(Direction.Increase),
-                target
-              )
-            else if Math.abs(cur - prev) > 3 then
-              State.Errored(ErrorReason.LargeJump(prev, cur), index, Some(Direction.Increase), target)
-            else State.Increasing(cur, target)
-          case State.Decreasing(prev, _) =>
-            if cur == prev then State.Errored(ErrorReason.SameNumber(prev), index, Some(Direction.Decrease), target)
-            else if cur > prev then
-              State.Errored(
-                ErrorReason.ChangedDirection(prev, cur, Direction.Increase),
-                index,
-                Some(Direction.Decrease),
-                target
-              )
-            else if Math.abs(cur - prev) > 3 then
-              State.Errored(ErrorReason.LargeJump(prev, cur), index, Some(Direction.Decrease), target)
-            else State.Decreasing(cur, target)
-      case (agg, (cur, index)) => agg
-    }
-
-    val state = {
-      val initial = calculate(Dampening.None)
-      val dampened = LazyList(numbers.indices*).map(i => calculate(Dampening.Damped(i)))
-      dampened.prepended(initial).find(_.isSafe).getOrElse(initial)
-    }
-
-    val isSafe: Boolean = state.isSafe
-
-    override def toString(): String =
-      given ColorContext = ColorContext(true)
-      val numbersString = s": ${numbers.zipWithIndex
-          .map { (n, i) =>
-            val dampIndex = state.dampening match
-              case Dampening.Damped(d) => d
-              case _                   => -1
-            val erroredIndex = state match
-              case State.Errored(_, i, _, _) => i
-              case _                         => -1
-            if i == erroredIndex then s"${n.toString.red}"
-            else if i == dampIndex then s"${n.toString.yellow}"
-            else n.toString
-          }
-          .mkString(", ")}"
-      state match
-        case s: State.Init       => s"❗️ Init $numbersString"
-        case s: State.Started    => s"❗️ Started $numbersString"
-        case s: State.Increasing => s"✅ ⬆️".green + s" $numbersString"
-        case s: State.Decreasing => s"✅ ⬇️".green + s" $numbersString"
-        case State.Errored(r, _, d, _) =>
-          val dir = d match
-            case Some(Direction.Increase) => "⬆️".red
-            case Some(Direction.Decrease) => "⬇️".red
-            case None                     => " ".red
-          s"❌ $dir $numbersString ${r.toString().cyan}"
+  case class Pair(prev: Int, current: Int) {
+    val transition = (prev, current) match
+      case (a, b) if Math.abs(a - b) > 3 => State.Errored
+      case (a, b) if a == b              => State.Errored
+      case (a, b) if a < b               => State.Increasing
+      case (a, b) if a > b               => State.Decreasing
   }
+
+  def getDampenedPairs(numbers: List[Int], dampening: Dampening): List[Pair] =
+    numbers.zipWithIndex
+      .filter((_, i) => !(dampening isEquals i))
+      .map((n, _) => n)
+      .sliding(2)
+      .toList
+      .map(x => Pair(x.head, x.last))
+
+  def getCombinations(numbers: List[Int]): LazyList[List[Pair]] =
+    LazyList(Dampening.None +: (0 until numbers.length).map(Dampening.Damped(_))*).map(getDampenedPairs(numbers, _))
+
+  def safe(pairs: List[Pair]): Boolean =
+    val transition: State = pairs
+      .foldLeft[Option[State]](None) { (transitionMaybe, pair) =>
+        transitionMaybe match
+          case None => Some(pair.transition)
+          case Some(prev) =>
+            (prev, pair.transition) match
+              case (a, b) if a == b && a != State.Errored => Some(pair.transition)
+              case _                                      => Some(State.Errored)
+      }
+      .getOrElse(throw Exception("No transition found"))
+    !transition.isInstanceOf[State.Errored.type]
