@@ -1,9 +1,7 @@
 package aoc
 package day2
 
-import com.bilalfazlani.rainbowcli.*
-
-object Part2 extends Challenge(day(2).part(1)):
+object Part2 extends Challenge(day(2)):
   def execute: Long =
     val regex = """\d+""".r
     input.count { str =>
