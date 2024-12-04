@@ -1,13 +1,14 @@
 package aoc
 package day4
 
-object Part1 extends Challenge(day(4)):
+object Part1 extends Challenge(day(4).part(1)):
   val width = input.head.length
   val height = input.length
   case class Position(x: Int, y: Int):
     def isInGrid: Boolean = x.between(0, width - 1) && y.between(0, height - 1)
+    def value: Char = input(y)(x)
   case class Combination(seq: IndexedSeq[Position]):
-    override def toString(): String = seq.map(p => input(p.y)(p.x)).mkString
+    override def toString(): String = seq.map(_.value).mkString
     def isValid: Boolean = seq.forall(_.isInGrid)
 
   def execute: Long =
